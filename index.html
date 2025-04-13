@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Player IPTV Simples</title>
+    <title>Player IPTV Automático</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -21,32 +21,9 @@
         h1 {
             color: #333;
             text-align: center;
-        }
-        .input-group {
-            display: flex;
             margin-bottom: 20px;
         }
-        #playlistUrl {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px 0 0 4px;
-            font-size: 16px;
-        }
-        #loadPlaylist {
-            padding: 10px 20px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 0 4px 4px 0;
-            cursor: pointer;
-            font-size: 16px;
-        }
-        #loadPlaylist:hover {
-            background-color: #45a049;
-        }
         #playlistItems {
-            display: none;
             margin-top: 20px;
             border: 1px solid #ddd;
             border-radius: 4px;
@@ -54,22 +31,28 @@
             overflow-y: auto;
         }
         .channel {
-            padding: 10px;
+            padding: 12px;
             border-bottom: 1px solid #eee;
             cursor: pointer;
+            transition: background-color 0.2s;
         }
         .channel:hover {
-            background-color: #f9f9f9;
+            background-color: #f0f0f0;
         }
         .channel:last-child {
             border-bottom: none;
         }
         .channel-name {
             font-weight: bold;
+            margin-bottom: 4px;
         }
         .channel-group {
             color: #666;
-            font-size: 0.9em;
+            font-size: 0.85em;
+            background-color: #eaeaea;
+            padding: 2px 6px;
+            border-radius: 4px;
+            display: inline-block;
         }
         #playerContainer {
             display: none;
@@ -78,123 +61,89 @@
         #videoPlayer {
             width: 100%;
             height: 500px;
-            background-color: black;
+            background-color: #000;
+            border-radius: 4px;
         }
         #backButton {
-            padding: 8px 16px;
+            padding: 10px 20px;
             background-color: #f44336;
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            font-size: 16px;
+            transition: background-color 0.3s;
         }
         #backButton:hover {
             background-color: #d32f2f;
         }
         .loading {
             text-align: center;
-            padding: 20px;
-            display: none;
+            padding: 30px;
         }
-        .error {
-            color: #f44336;
-            margin-top: 10px;
-            display: none;
+        .group-header {
+            background-color: #e0e0e0;
+            padding: 8px 12px;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 1;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Player IPTV Simples</h1>
-        
-        <div class="input-group">
-            <input type="text" id="playlistUrl" placeholder="Cole aqui o link da playlist .m3u ou .m3u8">
-            <button id="loadPlaylist">Carregar Playlist</button>
-        </div>
-        
-        <div id="errorMessage" class="error"></div>
+        <h1>📺 Player IPTV Automático</h1>
         
         <div id="loading" class="loading">
-            <p>Carregando playlist...</p>
+            <p>⏳ Carregando lista de canais...</p>
         </div>
         
         <div id="playlistItems"></div>
         
         <div id="playerContainer">
-            <button id="backButton">Voltar para a lista</button>
+            <button id="backButton">← Voltar para a lista</button>
             <video id="videoPlayer" controls autoplay playsinline></video>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const playlistUrlInput = document.getElementById('playlistUrl');
-            const loadPlaylistButton = document.getElementById('loadPlaylist');
             const playlistItemsDiv = document.getElementById('playlistItems');
             const playerContainer = document.getElementById('playerContainer');
             const videoPlayer = document.getElementById('videoPlayer');
             const backButton = document.getElementById('backButton');
             const loadingDiv = document.getElementById('loading');
-            const errorDiv = document.getElementById('errorMessage');
             
-            // Carregar playlist quando o botão é clicado
-            loadPlaylistButton.addEventListener('click', loadPlaylist);
+            // URL fixa da playlist
+            const playlistUrl = "https://raw.githubusercontent.com/Ramys/Iptv-Brasil-2025/refs/heads/master/Lista%20BR01.m3u8";
             
             // Voltar para a lista quando o botão é clicado
             backButton.addEventListener('click', function() {
                 playerContainer.style.display = 'none';
                 playlistItemsDiv.style.display = 'block';
                 videoPlayer.pause();
+                videoPlayer.removeAttribute('src');
             });
             
-            // Também permitir carregar com Enter
-            playlistUrlInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    loadPlaylist();
-                }
-            });
+            // Carregar a playlist automaticamente
+            loadPlaylist();
             
             function loadPlaylist() {
-                const playlistUrl = playlistUrlInput.value.trim();
-                
-                if (!playlistUrl) {
-                    showError('Por favor, insira um URL de playlist válido.');
-                    return;
-                }
-                
-                // Mostrar loading
-                loadingDiv.style.display = 'block';
-                playlistItemsDiv.style.display = 'none';
-                errorDiv.style.display = 'none';
-                
-                // Limpar playlist anterior
-                playlistItemsDiv.innerHTML = '';
-                
-                // Carregar a playlist
                 fetchPlaylist(playlistUrl)
                     .then(parsePlaylist)
                     .then(displayPlaylist)
                     .catch(error => {
-                        console.error('Erro ao carregar playlist:', error);
-                        showError('Erro ao carregar a playlist. Verifique o URL e tente novamente.');
-                    })
-                    .finally(() => {
-                        loadingDiv.style.display = 'none';
+                        console.error('Erro:', error);
+                        loadingDiv.innerHTML = '<p style="color: red;">❌ Erro ao carregar a playlist. Por favor, atualize a página.</p>';
                     });
             }
             
             function fetchPlaylist(url) {
-                // Se for uma URL de arquivo local (usando file://), não podemos usar fetch
-                if (url.startsWith('file://')) {
-                    return Promise.reject('Não é possível carregar arquivos locais diretamente devido a restrições de segurança do navegador.');
-                }
-                
-                return fetch(url)
+                return fetch(url, { cache: 'no-cache' })
                     .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Falha ao carregar a playlist');
-                        }
+                        if (!response.ok) throw new Error('Falha ao carregar');
                         return response.text();
                     });
             }
@@ -208,22 +157,14 @@
                     const trimmedLine = line.trim();
                     
                     if (trimmedLine.startsWith('#EXTINF:')) {
-                        // Esta linha contém metadados do canal
                         currentChannel = {};
-                        
-                        // Extrair nome do canal e grupo (se existir)
                         const parts = trimmedLine.split(',');
-                        if (parts.length > 1) {
-                            currentChannel.name = parts[1];
-                        }
+                        if (parts.length > 1) currentChannel.name = parts[1];
                         
-                        // Extrair atributos (como group-title)
-                        const attrMatch = trimmedLine.match(/group-title="([^"]+)"/i);
-                        if (attrMatch) {
-                            currentChannel.group = attrMatch[1];
-                        }
-                    } else if (trimmedLine && !trimmedLine.startsWith('#') && currentChannel) {
-                        // Esta linha é a URL do canal
+                        const groupMatch = trimmedLine.match(/group-title="([^"]+)"/i);
+                        if (groupMatch) currentChannel.group = groupMatch[1];
+                    } 
+                    else if (trimmedLine && !trimmedLine.startsWith('#') && currentChannel) {
                         currentChannel.url = trimmedLine;
                         channels.push(currentChannel);
                         currentChannel = null;
@@ -234,84 +175,61 @@
             }
             
             function displayPlaylist(channels) {
+                loadingDiv.style.display = 'none';
+                
                 if (channels.length === 0) {
-                    showError('Nenhum canal encontrado na playlist.');
+                    playlistItemsDiv.innerHTML = '<p style="color: red; text-align: center;">Nenhum canal encontrado na playlist.</p>';
                     return;
                 }
                 
-                playlistItemsDiv.innerHTML = '';
-                
-                // Agrupar canais por grupo (se existir)
-                const groupedChannels = {};
+                // Agrupar canais por grupo
+                const groups = {};
                 channels.forEach(channel => {
                     const group = channel.group || 'Sem Grupo';
-                    if (!groupedChannels[group]) {
-                        groupedChannels[group] = [];
-                    }
-                    groupedChannels[group].push(channel);
+                    if (!groups[group]) groups[group] = [];
+                    groups[group].push(channel);
                 });
                 
-                // Criar elementos HTML para cada grupo e canal
-                for (const [groupName, groupChannels] of Object.entries(groupedChannels)) {
+                // Ordenar grupos alfabeticamente
+                const sortedGroups = Object.keys(groups).sort();
+                
+                // Criar elementos HTML
+                sortedGroups.forEach(groupName => {
                     const groupHeader = document.createElement('div');
-                    groupHeader.className = 'channel-group-header';
-                    groupHeader.style.padding = '10px';
-                    groupHeader.style.backgroundColor = '#eaeaea';
-                    groupHeader.style.fontWeight = 'bold';
+                    groupHeader.className = 'group-header';
                     groupHeader.textContent = groupName;
                     playlistItemsDiv.appendChild(groupHeader);
                     
-                    groupChannels.forEach(channel => {
+                    groups[groupName].forEach(channel => {
                         const channelElement = document.createElement('div');
                         channelElement.className = 'channel';
                         
-                        const nameElement = document.createElement('div');
-                        nameElement.className = 'channel-name';
-                        nameElement.textContent = channel.name || 'Canal sem nome';
+                        channelElement.innerHTML = `
+                            <div class="channel-name">${channel.name || 'Canal sem nome'}</div>
+                            ${channel.group ? `<div class="channel-group">${channel.group}</div>` : ''}
+                        `;
                         
-                        const groupElement = document.createElement('div');
-                        groupElement.className = 'channel-group';
-                        groupElement.textContent = channel.group || '';
-                        
-                        channelElement.appendChild(nameElement);
-                        if (channel.group) {
-                            channelElement.appendChild(groupElement);
-                        }
-                        
-                        channelElement.addEventListener('click', function() {
-                            playChannel(channel.url);
-                        });
-                        
+                        channelElement.addEventListener('click', () => playChannel(channel.url));
                         playlistItemsDiv.appendChild(channelElement);
                     });
-                }
-                
-                playlistItemsDiv.style.display = 'block';
+                });
             }
             
             function playChannel(url) {
                 playlistItemsDiv.style.display = 'none';
                 playerContainer.style.display = 'block';
                 
-                // Configurar o player de vídeo
                 videoPlayer.src = url;
                 videoPlayer.load();
                 
-                // Configurar para tentar reproduzir automaticamente
                 const playPromise = videoPlayer.play();
                 
                 if (playPromise !== undefined) {
                     playPromise.catch(error => {
                         console.log('Reprodução automática impedida:', error);
-                        // Mostrar controles para que o usuário possa iniciar manualmente
                         videoPlayer.controls = true;
                     });
                 }
-            }
-            
-            function showError(message) {
-                errorDiv.textContent = message;
-                errorDiv.style.display = 'block';
             }
         });
     </script>
